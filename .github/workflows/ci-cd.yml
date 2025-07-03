@@ -1,0 +1,24 @@
+name: CI/CD Pipeline
+
+on:
+    push:
+        branches: ["main"]
+        # tags:
+        #     - "v*"
+    pull_request:
+        branches: ["main"]
+jobs:
+    publish_images:
+        runs-on: ubuntu-latest
+        steps:
+        - name: checkout
+          uses: actions/checkout@v4
+
+        - name: build image
+          run: docker build ./ -t hoangflong/fcj-image
+        
+        - name: push image to docker hub
+          run: | 
+                docker login -u hoangflong -p ${{ secrets.DOCKER_HUB_SECRET }}
+                docker push hoangflong/fcj-image:latest
+        
