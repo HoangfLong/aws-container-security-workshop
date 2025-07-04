@@ -3,22 +3,9 @@ name: CI/CD Pipeline
 on:
   push:
     branches: ["main"]
-    tags:
-      - "*"
-  pull_request:
-    branches: ["main"]
-
-env:
-  # Biến này chứa đường dẫn ECR đầy đủ + tag.
-  # CHỈ DÙNG CHO LỆNH 'docker push'
-  IMAGE_NAME_FCJ: ${{ secrets.AWS_COUNT_NUMBER }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.CI_PROJECT_FCJ }}:${{ github.ref_name }}
-  
-  # THÊM BIẾN NÀY: Dùng làm tag cục bộ cho lệnh 'docker build'
-  # Ví dụ: fcj-workshop-app:main
-  LOCAL_BUILD_TAG: fcj-workshop-app:${{ github.ref_name }} 
-
 jobs:
-  publish_images:
+  build-and-push:
+    name: build and push to ECR
     runs-on: ubuntu-latest
     steps:
     - name: checkout
@@ -35,29 +22,12 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    # BƯỚC DEBUG RẤT QUAN TRỌNG: Hãy xem output của nó!
-    - name: Debug Resolved Tags
+    - name: build, tag, and push the image to ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: lesson-086
+        IMAGE_TAG: ${{ steps.increment-git-tag.outputs.git-tag }}
       run: |
-        echo "--- Debugging Tags ---"
-        echo "LOCAL_BUILD_TAG will be: '${{ env.LOCAL_BUILD_TAG }}'"
-        echo "IMAGE_NAME_FCJ (full ECR path) will be: '${{ env.IMAGE_NAME_FCJ }}'"
-        echo "--- End Debug ---"
-
-    - name: Build, tag, and push image to Amazon ECR
-      working-directory: ./
-      run: |
-        echo "Starting Docker build process..."
-        
-        # BƯỚC 1: Build image với TAG CỤC BỘ ĐƠN GIẢN.
-        # Ví dụ: docker build -f Dockerfile -t fcj-workshop-app:main .
-        docker build -f Dockerfile -t ${{ env.LOCAL_BUILD_TAG }} .
-
-        # BƯỚC 2: Gán thêm TAG ECR ĐẦY ĐỦ cho image vừa build.
-        # Ví dụ: docker tag fcj-workshop-app:main 497731268814.dkr.ecr.ap-southeast-1.amazonaws.com/fcj-workshop-app:main
-        docker tag ${{ env.LOCAL_BUILD_TAG }} ${{ env.IMAGE_NAME_FCJ }}
-
-        # BƯỚC 3: Đẩy image lên ECR bằng TAG ECR ĐẦY ĐỦ.
-        # Ví dụ: docker push 497731268814.dkr.ecr.ap-southeast-1.amazonaws.com/fcj-workshop-app:main
-        docker push ${{ env.IMAGE_NAME_FCJ }}
-
-        echo "Docker build and push completed successfully."
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
