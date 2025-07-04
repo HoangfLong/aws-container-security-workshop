@@ -39,3 +39,5 @@ jobs:
           run: |
             docker build -f Dockerfile -t ${{ env.IMAGE_NAME_FCJ }} .
             docker push ${{ env.IMAGE_NAME_FCJ }}
+            - name: Debug image name
+              run: echo "Image name: ${{ env.IMAGE_NAME_FCJ }}"
