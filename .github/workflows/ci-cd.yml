@@ -1,44 +1,59 @@
 name: CI/CD Pipeline
 
 on:
-    push:
-        branches: ["main"]
-        tags:
-            - "*"
-    pull_request:
-        branches: ["main"]
+  push:
+    branches: ["main"]
+    tags:
+      - "*" 
+  pull_request:
+    branches: ["main"]
+
 env:
   IMAGE_NAME_FCJ: ${{ secrets.AWS_COUNT_NUMBER }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.CI_PROJECT_FCJ }}:${{ github.ref_name }}
-
   LOCAL_IMAGE_TAG: fcj-workshop-app:${{ github.ref_name }} 
+
 jobs:
-    publish_images:
-        runs-on: ubuntu-latest
-        steps:
-        - name: checkout
-          uses: actions/checkout@v4
+  publish_images:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
 
-        # - name: build image
-        #   run: docker build ./ -t hoangflong/fcj-image
-        
-        # - name: push image to docker hub
-        #   run: | 
-        #         docker login -u hoangflong -p 
-        #         docker push hoangflong/fcj-image:latest
-        - name: configure aws credentials
-          uses: aws-actions/configure-aws-credentials@v1
-          with:
-              aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-              aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-              aws-region: ${{ secrets.AWS_REGION }}
-        
-        - name: login to amazon ECR
-          id: login-ecr
-          uses: aws-actions/amazon-ecr-login@v1
+    - name: configure aws credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-        - name: Build, tag, and push image to Amazon ECR
-          working-directory: ./
-          run: |
-            docker build -f Dockerfile -t ${{ env.LOCAL_IMAGE_TAG }} .
-            docker tag ${{ env.LOCAL_IMAGE_TAG }} ${{ env.IMAGE_NAME_FCJ }}
-            docker push ${{ env.IMAGE_NAME_FCJ }}
+    - name: login to amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    # --- DEBUGGING STEP: Print resolved parts of the ECR URI ---
+    - name: Debug ECR URI components
+      run: |
+        echo "Checking ECR URI components..."
+        echo "Github ref name: ${{ github.ref_name }}"
+        # These will print "***" for secrets, but will show if they are missing/empty.
+        echo "Registry part (should not be empty): ${{ secrets.AWS_COUNT_NUMBER }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
+        echo "Repo name (should not be empty): ${{ secrets.CI_PROJECT_FCJ }}"
+        echo "Full IMAGE_NAME_FCJ (will mask secrets): ${{ env.IMAGE_NAME_FCJ }}"
+        # You can also try to print if a specific secret is defined (will print true/false)
+        echo "AWS_COUNT_NUMBER secret defined: ${{ secrets.AWS_COUNT_NUMBER != '' }}"
+        echo "AWS_REGION secret defined: ${{ secrets.AWS_REGION != '' }}"
+        echo "CI_PROJECT_FCJ secret defined: ${{ secrets.CI_PROJECT_FCJ != '' }}"
+
+    - name: Build, tag, and push image to Amazon ECR
+      working-directory: ./
+      run: |
+        echo "Starting Docker build process..."
+        docker build -f Dockerfile -t ${{ env.LOCAL_IMAGE_TAG }} .
+
+        # This `docker tag` command is now essential because the error is happening at the push step.
+        echo "Tagging local image '${{ env.LOCAL_IMAGE_TAG }}' with full ECR tag: ${{ env.IMAGE_NAME_FCJ }}"
+        docker tag ${{ env.LOCAL_IMAGE_TAG }} ${{ env.IMAGE_NAME_FCJ }}
+
+        echo "Pushing image to ECR: ${{ env.IMAGE_NAME_FCJ }}"
+        docker push ${{ env.IMAGE_NAME_FCJ }}
+        echo "Docker build and push completed."
