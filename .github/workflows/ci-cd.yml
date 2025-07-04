@@ -9,6 +9,8 @@ on:
         branches: ["main"]
 env:
   IMAGE_NAME_FCJ: ${{ secrets.AWS_COUNT_NUMBER }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.CI_PROJECT_FCJ }}:${{ github.ref_name }}
+
+  LOCAL_IMAGE_TAG: fcj-workshop-app:${{ github.ref_name }} 
 jobs:
     publish_images:
         runs-on: ubuntu-latest
@@ -37,7 +39,6 @@ jobs:
         - name: Build, tag, and push image to Amazon ECR
           working-directory: ./
           run: |
-            docker build -f Dockerfile -t ${{ env.IMAGE_NAME_FCJ }} .
+            docker build -f Dockerfile -t ${{ env.LOCAL_IMAGE_TAG }} .
+            docker tag ${{ env.LOCAL_IMAGE_TAG }} ${{ env.IMAGE_NAME_FCJ }}
             docker push ${{ env.IMAGE_NAME_FCJ }}
-            - name: Debug image name
-              run: echo "Image name: ${{ env.IMAGE_NAME_FCJ }}"
