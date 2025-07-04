@@ -7,6 +7,8 @@ on:
         #     - "v*"
     pull_request:
         branches: ["main"]
+env:
+  IMAGE_NAME_FCJ: ${{ secrets.AWS_COUNT_NUMBER }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.CI_PROJECT_FCJ }}:${{ github.ref_name }}
 jobs:
     publish_images:
         runs-on: ubuntu-latest
@@ -14,11 +16,26 @@ jobs:
         - name: checkout
           uses: actions/checkout@v4
 
-        - name: build image
-          run: docker build ./ -t hoangflong/fcj-image
+        # - name: build image
+        #   run: docker build ./ -t hoangflong/fcj-image
         
-        - name: push image to docker hub
-          run: | 
-                docker login -u hoangflong -p ${{ secrets.DOCKER_HUB_SECRET }}
-                docker push hoangflong/fcj-image:latest
+        # - name: push image to docker hub
+        #   run: | 
+        #         docker login -u hoangflong -p ${{ secrets.DOCKER_HUB_SECRET }}
+        #         docker push hoangflong/fcj-image:latest
+        - name: configure aws credentials
+          uses: aws-actions/configure-aws-credentials@v1
+          with:
+              aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+              aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+              aws-region: ${{ secrets.AWS_REGION }}
         
+        - name: login to amazon ECR
+          id: login-ecr
+          uses: aws-actions/amazon-ecr-login@v1
+
+        - name: Build, tag, and push image to Amazon ECR
+          working-directory: ./
+          run: |
+            docker build -f Dockerfile -t ${{ env.IMAGE_NAME_FCJ }}
+            docker push ${{ env.IMAGE_NAME_FCJ }}
