@@ -21,7 +21,7 @@ jobs:
         
         # - name: push image to docker hub
         #   run: | 
-        #         docker login -u hoangflong -p ${{ secrets.DOCKER_HUB_SECRET }}
+        #         docker login -u hoangflong -p 
         #         docker push hoangflong/fcj-image:latest
         - name: configure aws credentials
           uses: aws-actions/configure-aws-credentials@v1
