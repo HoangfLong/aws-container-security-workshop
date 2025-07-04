@@ -37,5 +37,5 @@ jobs:
         - name: Build, tag, and push image to Amazon ECR
           working-directory: ./
           run: |
-            docker build -f Dockerfile -t ${{ env.CI_PROJECT_FCJ }} .
+            docker build -f Dockerfile -t fcj-workshop-app:${{ github.ref_name }} .
             docker push ${{ env.IMAGE_NAME_FCJ }}
