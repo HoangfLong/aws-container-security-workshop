@@ -1,4 +1,3 @@
-#!/bin/bash
 
 VERSION=""
 
@@ -16,17 +15,15 @@ CURRENT_VERSION=`git describe --abbrev=0 --tags 2>/dev/null`
 
 if [[ $CURRENT_VERSION == '' ]]
 then
-  CURRENT_VERSION='v0.0.0'
+  CURRENT_VERSION='v0.1.0'
 fi
 echo "Current Version: $CURRENT_VERSION"
 
 # replace . with space so can split into an array
-# CURRENT_VERSION_PARTS=(${CURRENT_VERSION//./ })
-VERSION_CLEAN=${CURRENT_VERSION#v}
+CURRENT_VERSION_PARTS=(${CURRENT_VERSION//./ })
 
 # get number parts
-IFS='.' read -r VNUM1 VNUM2 VNUM3 <<< "$VERSION_CLEAN"
-# VNUM1=${CURRENT_VERSION_PARTS[0]}
+VNUM1=${CURRENT_VERSION_PARTS[0]}
 VNUM2=${CURRENT_VERSION_PARTS[1]}
 VNUM3=${CURRENT_VERSION_PARTS[2]}
 

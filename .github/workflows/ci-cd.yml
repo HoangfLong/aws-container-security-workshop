@@ -3,8 +3,6 @@ name: CI/CD Pipeline
 on:
   push:
     branches: ["main"]
-permissions:
-  contents: write 
 jobs:
   build-and-push:
     name: build and push to ECR
@@ -27,8 +25,7 @@ jobs:
     - name: Automatic Tagging of Releases
       id: increment-git-tag
       run: |
-        chmod +x ./build/git_update.sh
-          ./build/git_update.sh -v major
+        bash ./build/git_update.sh -v major
 
     - name: build, tag, and push the image to ECR
       id: build-image
