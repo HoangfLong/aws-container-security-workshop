@@ -4,13 +4,18 @@ on:
   push:
     branches: ["main"]
     tags:
-      - "*" 
+      - "*"
   pull_request:
     branches: ["main"]
 
 env:
+  # Biến này chứa đường dẫn ECR đầy đủ + tag.
+  # CHỈ DÙNG CHO LỆNH 'docker push'
   IMAGE_NAME_FCJ: ${{ secrets.AWS_COUNT_NUMBER }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.CI_PROJECT_FCJ }}:${{ github.ref_name }}
-  LOCAL_IMAGE_TAG: fcj-workshop-app:${{ github.ref_name }} 
+  
+  # THÊM BIẾN NÀY: Dùng làm tag cục bộ cho lệnh 'docker build'
+  # Ví dụ: fcj-workshop-app:main
+  LOCAL_BUILD_TAG: fcj-workshop-app:${{ github.ref_name }} 
 
 jobs:
   publish_images:
@@ -25,35 +30,34 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
-
+        
     - name: login to amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    # --- DEBUGGING STEP: Print resolved parts of the ECR URI ---
-    - name: Debug ECR URI components
+    # BƯỚC DEBUG RẤT QUAN TRỌNG: Hãy xem output của nó!
+    - name: Debug Resolved Tags
       run: |
-        echo "Checking ECR URI components..."
-        echo "Github ref name: ${{ github.ref_name }}"
-        # These will print "***" for secrets, but will show if they are missing/empty.
-        echo "Registry part (should not be empty): ${{ secrets.AWS_COUNT_NUMBER }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
-        echo "Repo name (should not be empty): ${{ secrets.CI_PROJECT_FCJ }}"
-        echo "Full IMAGE_NAME_FCJ (will mask secrets): ${{ env.IMAGE_NAME_FCJ }}"
-        # You can also try to print if a specific secret is defined (will print true/false)
-        echo "AWS_COUNT_NUMBER secret defined: ${{ secrets.AWS_COUNT_NUMBER != '' }}"
-        echo "AWS_REGION secret defined: ${{ secrets.AWS_REGION != '' }}"
-        echo "CI_PROJECT_FCJ secret defined: ${{ secrets.CI_PROJECT_FCJ != '' }}"
+        echo "--- Debugging Tags ---"
+        echo "LOCAL_BUILD_TAG will be: '${{ env.LOCAL_BUILD_TAG }}'"
+        echo "IMAGE_NAME_FCJ (full ECR path) will be: '${{ env.IMAGE_NAME_FCJ }}'"
+        echo "--- End Debug ---"
 
     - name: Build, tag, and push image to Amazon ECR
       working-directory: ./
       run: |
         echo "Starting Docker build process..."
-        docker build -f Dockerfile -t ${{ env.LOCAL_IMAGE_TAG }} .
+        
+        # BƯỚC 1: Build image với TAG CỤC BỘ ĐƠN GIẢN.
+        # Ví dụ: docker build -f Dockerfile -t fcj-workshop-app:main .
+        docker build -f Dockerfile -t ${{ env.LOCAL_BUILD_TAG }} .
 
-        # This `docker tag` command is now essential because the error is happening at the push step.
-        echo "Tagging local image '${{ env.LOCAL_IMAGE_TAG }}' with full ECR tag: ${{ env.IMAGE_NAME_FCJ }}"
-        docker tag ${{ env.LOCAL_IMAGE_TAG }} ${{ env.IMAGE_NAME_FCJ }}
+        # BƯỚC 2: Gán thêm TAG ECR ĐẦY ĐỦ cho image vừa build.
+        # Ví dụ: docker tag fcj-workshop-app:main 497731268814.dkr.ecr.ap-southeast-1.amazonaws.com/fcj-workshop-app:main
+        docker tag ${{ env.LOCAL_BUILD_TAG }} ${{ env.IMAGE_NAME_FCJ }}
 
-        echo "Pushing image to ECR: ${{ env.IMAGE_NAME_FCJ }}"
+        # BƯỚC 3: Đẩy image lên ECR bằng TAG ECR ĐẦY ĐỦ.
+        # Ví dụ: docker push 497731268814.dkr.ecr.ap-southeast-1.amazonaws.com/fcj-workshop-app:main
         docker push ${{ env.IMAGE_NAME_FCJ }}
-        echo "Docker build and push completed."
+
+        echo "Docker build and push completed successfully."
