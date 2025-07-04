@@ -48,16 +48,16 @@ echo "($VERSION) updating $CURRENT_VERSION to $NEW_TAG"
 
 # get current hash and see if it already has a tag
 GIT_COMMIT=`git rev-parse HEAD`
-NEEDS_TAG=`git describe --contains $GIT_COMMIT 2>/dev/null`
+NEEDS_TAG=$(git tag --points-at $GIT_COMMIT)
 
 # only tag if no tag already
 if [ -z "$NEEDS_TAG" ]; then
   echo "Tagged with $NEW_TAG"
   git tag $NEW_TAG
-  git push --tags
-  git push
+  git push origin $NEW_TAG
 else
   echo "Already a tag on this commit"
+  NEW_TAG=$NEEDS_TAG
 fi
 
 echo "git-tag=$NEW_TAG" >> $GITHUB_OUTPUT
